@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Play, Pause, RotateCcw } from 'lucide-react';
-import './App.css';
-import './index.css';
+import './SnakeGame.css'; // Importar el archivo CSS
 
 const GRID_SIZE = 20;
 const INITIAL_SNAKE = [{ x: 10, y: 10 }];
@@ -17,6 +16,11 @@ const SnakeGame = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [gameSpeed, setGameSpeed] = useState(150);
   const [highScore, setHighScore] = useState(0);
+  const [showScoreForm, setShowScoreForm] = useState(false);
+  const [playerName, setPlayerName] = useState('');
+  const [playerEmail, setPlayerEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
   
   const gameLoopRef = useRef();
   const gameAreaRef = useRef();
@@ -59,6 +63,10 @@ const SnakeGame = () => {
         setIsPlaying(false);
         if (score > highScore) {
           setHighScore(score);
+        }
+        // Mostrar formulario solo si el score es mayor a 0
+        if (score > 0) {
+          setShowScoreForm(true);
         }
         return currentSnake;
       }
@@ -204,6 +212,11 @@ const SnakeGame = () => {
     setScore(0);
     setIsPlaying(false);
     setGameSpeed(150);
+    setShowScoreForm(false);
+    setPlayerName('');
+    setPlayerEmail('');
+    setIsSubmitting(false);
+    setSubmitSuccess(false);
   };
 
   const startGame = () => {
@@ -213,26 +226,72 @@ const SnakeGame = () => {
     setIsPlaying(true);
   };
 
+  // Función para enviar puntuación a la base de datos
+  const submitScore = async (e) => {
+    e.preventDefault();
+    
+    if (!playerName.trim() || !playerEmail.trim()) {
+      alert('Por favor completa todos los campos');
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      // Aquí harías la llamada a tu API backend
+      const response = await fetch('/api/scores', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          playerName: playerName.trim(),
+          playerEmail: playerEmail.trim(),
+          score: score,
+          date: new Date().toISOString()
+        })
+      });
+
+      if (response.ok) {
+        setSubmitSuccess(true);
+        setShowScoreForm(false);
+        // Opcional: actualizar el high score desde el servidor
+        // const data = await response.json();
+        // if (data.newHighScore) setHighScore(data.newHighScore);
+      } else {
+        throw new Error('Error al guardar la puntuación');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al guardar la puntuación. Intenta nuevamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const skipScoreSubmission = () => {
+    setShowScoreForm(false);
+    setPlayerName('');
+    setPlayerEmail('');
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-emerald-900 flex flex-col items-center justify-center p-4">
-      <div className="bg-black/20 backdrop-blur-sm rounded-2xl p-6 shadow-2xl border border-green-400/20">
+    <div className="game-container">
+      <div className="game-board">
         {/* Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-4xl font-bold text-green-400 mb-2">🐍 Snake Game</h1>
-          <div className="flex justify-center gap-8 text-green-300">
-            <div>Score: <span className="text-yellow-400 font-bold">{score}</span></div>
-            <div>High Score: <span className="text-orange-400 font-bold">{highScore}</span></div>
+        <div className="game-header">
+          <h1 className="game-title">🐍 Snake Game</h1>
+          <div className="score-container">
+            <div className="score">Score: <span className="score-value">{score}</span></div>
+            <div className="high-score">High Score: <span className="high-score-value">{highScore}</span></div>
           </div>
         </div>
 
         {/* Área de juego */}
         <div 
           ref={gameAreaRef}
-          className="relative bg-gray-900 border-2 border-green-400 rounded-lg mx-auto touch-none"
+          className="game-area"
           style={{
-            width: '320px',
-            height: '320px',
-            display: 'grid',
             gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`,
             gridTemplateRows: `repeat(${GRID_SIZE}, 1fr)`
           }}
@@ -241,11 +300,7 @@ const SnakeGame = () => {
           {snake.map((segment, index) => (
             <div
               key={index}
-              className={`${
-                index === 0 
-                  ? 'bg-green-400 border border-green-200' 
-                  : 'bg-green-500 border border-green-300'
-              } rounded-sm`}
+              className={`snake-segment ${index === 0 ? 'snake-head' : 'snake-body'}`}
               style={{
                 gridColumn: segment.x + 1,
                 gridRow: segment.y + 1
@@ -255,7 +310,7 @@ const SnakeGame = () => {
           
           {/* Food */}
           <div
-            className="bg-red-500 rounded-full border border-red-300 animate-pulse"
+            className="food"
             style={{
               gridColumn: food.x + 1,
               gridRow: food.y + 1
@@ -263,30 +318,88 @@ const SnakeGame = () => {
           />
 
           {/* Game Over Overlay */}
-          {gameOver && (
-            <div className="absolute inset-0 bg-black/70 flex items-center justify-center rounded-lg">
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-red-400 mb-2">Game Over!</h2>
-                <p className="text-green-300 mb-4">Score: {score}</p>
-                <button
-                  onClick={startGame}
-                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-bold transition-colors"
-                >
+          {gameOver && !showScoreForm && (
+            <div className="game-over-overlay">
+              <div className="game-over-content">
+                <h2 className="game-over-title">Game Over!</h2>
+                <p className="game-over-score">Score: {score}</p>
+                {submitSuccess && (
+                  <p className="submit-success">¡Puntuación guardada exitosamente!</p>
+                )}
+                <button onClick={startGame} className="btn btn-primary">
                   Play Again
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* Score Submission Form */}
+          {showScoreForm && (
+            <div className="game-over-overlay">
+              <div className="score-form-content">
+                <h2 className="form-title">¡Registra tu puntuación!</h2>
+                <p className="form-score">Tu puntuación: <span>{score}</span></p>
+                
+                <form onSubmit={submitScore} className="score-form">
+                  <div className="form-group">
+                    <label htmlFor="playerName">Nombre:</label>
+                    <input
+                      type="text"
+                      id="playerName"
+                      value={playerName}
+                      onChange={(e) => setPlayerName(e.target.value)}
+                      placeholder="Tu nombre"
+                      required
+                      maxLength={50}
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="playerEmail">Correo electrónico:</label>
+                    <input
+                      type="email"
+                      id="playerEmail"
+                      value={playerEmail}
+                      onChange={(e) => setPlayerEmail(e.target.value)}
+                      placeholder="tu@email.com"
+                      required
+                      maxLength={100}
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  
+                  <div className="form-buttons">
+                    <button 
+                      type="submit" 
+                      className="btn btn-primary"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? 'Guardando...' : 'Guardar Puntuación'}
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={skipScoreSubmission}
+                      className="btn btn-secondary"
+                      disabled={isSubmitting}
+                    >
+                      Saltar
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           )}
         </div>
 
         {/* Controles */}
-        <div className="mt-6">
+        <div className="controls-container">
           {/* Botones de control */}
-          <div className="flex justify-center gap-4 mb-4">
+          <div className="game-controls">
             <button
               onClick={startGame}
               disabled={isPlaying && !gameOver}
-              className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-500 text-white px-4 py-2 rounded-lg font-bold transition-colors flex items-center gap-2"
+              className="btn btn-start"
             >
               <Play size={16} />
               Start
@@ -294,26 +407,23 @@ const SnakeGame = () => {
             <button
               onClick={toggleGame}
               disabled={gameOver}
-              className="bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-500 text-white px-4 py-2 rounded-lg font-bold transition-colors flex items-center gap-2"
+              className="btn btn-pause"
             >
               {isPlaying ? <Pause size={16} /> : <Play size={16} />}
               {isPlaying ? 'Pause' : 'Resume'}
             </button>
-            <button
-              onClick={resetGame}
-              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold transition-colors flex items-center gap-2"
-            >
+            <button onClick={resetGame} className="btn btn-reset">
               <RotateCcw size={16} />
               Reset
             </button>
           </div>
 
           {/* Controles direccionales táctiles */}
-          <div className="grid grid-cols-3 gap-2 max-w-48 mx-auto">
+          <div className="direction-controls">
             <div></div>
             <button
               onClick={() => handleDirectionChange({ x: 0, y: -1 })}
-              className="bg-gray-700 hover:bg-gray-600 text-green-400 p-3 rounded-lg transition-colors touch-manipulation"
+              className="direction-btn"
             >
               <ChevronUp size={24} />
             </button>
@@ -321,14 +431,14 @@ const SnakeGame = () => {
             
             <button
               onClick={() => handleDirectionChange({ x: -1, y: 0 })}
-              className="bg-gray-700 hover:bg-gray-600 text-green-400 p-3 rounded-lg transition-colors touch-manipulation"
+              className="direction-btn"
             >
               <ChevronLeft size={24} />
             </button>
             <div></div>
             <button
               onClick={() => handleDirectionChange({ x: 1, y: 0 })}
-              className="bg-gray-700 hover:bg-gray-600 text-green-400 p-3 rounded-lg transition-colors touch-manipulation"
+              className="direction-btn"
             >
               <ChevronRight size={24} />
             </button>
@@ -336,7 +446,7 @@ const SnakeGame = () => {
             <div></div>
             <button
               onClick={() => handleDirectionChange({ x: 0, y: 1 })}
-              className="bg-gray-700 hover:bg-gray-600 text-green-400 p-3 rounded-lg transition-colors touch-manipulation"
+              className="direction-btn"
             >
               <ChevronDown size={24} />
             </button>
@@ -344,7 +454,7 @@ const SnakeGame = () => {
           </div>
 
           {/* Instrucciones */}
-          <div className="text-center mt-4 text-green-300 text-sm">
+          <div className="instructions">
             <p>🎮 Usa las flechas del teclado, los botones o desliza para mover</p>
             <p>📱 Optimizado para tablets y móviles</p>
             <p>🍎 Come la comida roja para crecer</p>

@@ -1,11 +1,11 @@
-// server.js - Backend para el juego Snake con Express y MongoDB
+import express from "express";
+import mongoose from "mongoose";
+import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import dotenv from "dotenv";
 
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-require('dotenv').config();
+dotenv.config()
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -16,7 +16,11 @@ app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true
 }));
-app.use(express.json({ limit: '10mb' }));
+
+
+app.use(express.json(
+  {limit: '50mb'}
+));
 
 // Rate limiting
 const limiter = rateLimit({
@@ -27,10 +31,7 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Conexión a MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/snake-game', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/snake-game', {})
 .then(() => console.log('✅ Conectado a MongoDB'))
 .catch(err => console.error('❌ Error conectando a MongoDB:', err));
 
@@ -59,10 +60,6 @@ const scoreSchema = new mongoose.Schema({
   date: {
     type: Date,
     default: Date.now
-  },
-  ipAddress: {
-    type: String,
-    required: true
   }
 }, {
   timestamps: true
@@ -75,14 +72,9 @@ scoreSchema.index({ playerEmail: 1 });
 
 const Score = mongoose.model('Score', scoreSchema);
 
-// Middleware para obtener IP del cliente
-const getClientIP = (req, res, next) => {
-  req.clientIP = req.headers['x-forwarded-for'] || 
-                 req.connection.remoteAddress || 
-                 req.socket.remoteAddress ||
-                 (req.connection.socket ? req.connection.socket.remoteAddress : null);
-  next();
-};
+app.listen(PORT, () => {
+  console.log("Server is running on port 5000");
+});
 
 // Rutas
 
@@ -122,28 +114,28 @@ app.get('/api/scores', async (req, res) => {
   }
 });
 
-// GET - Obtener puntuación más alta
-app.get('/api/scores/highest', async (req, res) => {
-  try {
-    const highestScore = await Score.findOne()
-      .sort({ score: -1 })
-      .select('playerName score date -_id');
+// // GET - Obtener puntuación más alta
+// app.get('/api/scores/highest', async (req, res) => {
+//   try {
+//     const highestScore = await Score.findOne()
+//       .sort({ score: -1 })
+//       .select('playerName score date -_id');
 
-    res.json({
-      success: true,
-      data: highestScore
-    });
-  } catch (error) {
-    console.error('Error obteniendo puntuación más alta:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error interno del servidor'
-    });
-  }
-});
+//     res.json({
+//       success: true,
+//       data: highestScore
+//     });
+//   } catch (error) {
+//     console.error('Error obteniendo puntuación más alta:', error);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Error interno del servidor'
+//     });
+//   }
+// });
 
 // POST - Guardar nueva puntuación
-app.post('/api/scores', getClientIP, async (req, res) => {
+app.post('/api/scores', async (req, res) => {
   try {
     const { playerName, playerEmail, score } = req.body;
 
@@ -197,7 +189,6 @@ app.post('/api/scores', getClientIP, async (req, res) => {
       playerName: playerName.trim(),
       playerEmail: playerEmail.trim().toLowerCase(),
       score,
-      ipAddress: req.clientIP
     });
 
     await newScore.save();
@@ -241,73 +232,41 @@ app.post('/api/scores', getClientIP, async (req, res) => {
   }
 });
 
-// GET - Obtener estadísticas
-app.get('/api/stats', async (req, res) => {
-  try {
-    const totalGames = await Score.countDocuments();
-    const averageScore = await Score.aggregate([
-      { $group: { _id: null, avgScore: { $avg: '$score' } } }
-    ]);
+// // GET - Obtener estadísticas
+// app.get('/api/stats', async (req, res) => {
+//   try {
+//     const totalGames = await Score.countDocuments();
+//     const averageScore = await Score.aggregate([
+//       { $group: { _id: null, avgScore: { $avg: '$score' } } }
+//     ]);
     
-    const topPlayers = await Score.aggregate([
-      { $group: { 
-          _id: '$playerEmail', 
-          playerName: { $first: '$playerName' },
-          maxScore: { $max: '$score' },
-          gamesPlayed: { $sum: 1 }
-        }
-      },
-      { $sort: { maxScore: -1 } },
-      { $limit: 5 },
-      { $project: { _id: 0, playerName: 1, maxScore: 1, gamesPlayed: 1 } }
-    ]);
+//     const topPlayers = await Score.aggregate([
+//       { $group: { 
+//           _id: '$playerEmail', 
+//           playerName: { $first: '$playerName' },
+//           maxScore: { $max: '$score' },
+//           gamesPlayed: { $sum: 1 }
+//         }
+//       },
+//       { $sort: { maxScore: -1 } },
+//       { $limit: 5 },
+//       { $project: { _id: 0, playerName: 1, maxScore: 1, gamesPlayed: 1 } }
+//     ]);
 
-    res.json({
-      success: true,
-      data: {
-        totalGames,
-        averageScore: averageScore[0]?.avgScore || 0,
-        topPlayers
-      }
-    });
-  } catch (error) {
-    console.error('Error obteniendo estadísticas:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error interno del servidor'
-    });
-  }
-});
+//     res.json({
+//       success: true,
+//       data: {
+//         totalGames,
+//         averageScore: averageScore[0]?.avgScore || 0,
+//         topPlayers
+//       }
+//     });
+//   } catch (error) {
+//     console.error('Error obteniendo estadísticas:', error);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Error interno del servidor'
+//     });
+//   }
+// });
 
-// Middleware para rutas no encontradas
-app.use('*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'Ruta no encontrada'
-  });
-});
-
-// Middleware para manejo de errores
-app.use((error, req, res, next) => {
-  console.error('Error no manejado:', error);
-  res.status(500).json({
-    success: false,
-    message: 'Error interno del servidor'
-  });
-});
-
-// Iniciar servidor
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
-});
-
-// Manejo de cierre graceful
-process.on('SIGTERM', () => {
-  console.log('SIGTERM recibido, cerrando servidor...');
-  mongoose.connection.close(() => {
-    console.log('Conexión a MongoDB cerrada');
-    process.exit(0);
-  });
-});
-
-module.exports = app;

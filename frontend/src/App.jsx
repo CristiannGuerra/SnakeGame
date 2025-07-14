@@ -239,7 +239,7 @@ const SnakeGame = () => {
     
     try {
       // Aquí harías la llamada a tu API backend
-      const response = await fetch('/api/scores', {
+      const response = await fetch('http://localhost:5000/api/scores', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

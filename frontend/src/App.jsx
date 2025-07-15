@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Play, Pause, RotateCcw } from 'lucide-react';
 import './SnakeGame.css'; // Importar el archivo CSS
+import ENVIROMENT from './config/environment.config';
 
 const GRID_SIZE = 20;
 const INITIAL_SNAKE = [{ x: 10, y: 10 }];
@@ -239,7 +240,7 @@ const SnakeGame = () => {
     
     try {
       // Aquí harías la llamada a tu API backend
-      const response = await fetch('http://localhost:5000/api/scores', {
+      const response = await fetch(`${ENVIROMENT.URL_API}/api/scores`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

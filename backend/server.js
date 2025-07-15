@@ -26,10 +26,31 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Conexión a MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/snake-game', {})
-.then(() => console.log('✅ Conectado a MongoDB'))
-.catch(err => console.error('❌ Error conectando a MongoDB:', err));
+// Conexión a MongoDB optimizada para Vercel
+let isConnected = false;
+
+const connectToDatabase = async () => {
+  if (isConnected) {
+    return;
+  }
+
+  try {
+    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/snake-game';
+    
+    await mongoose.connect(mongoUri, {
+      bufferCommands: false,
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+    
+    isConnected = true;
+    console.log('✅ Conectado a MongoDB Atlas');
+  } catch (error) {
+    console.error('❌ Error conectando a MongoDB:', error);
+    throw error;
+  }
+};
 
 // Esquema de puntuación
 const scoreSchema = new mongoose.Schema({
@@ -66,14 +87,28 @@ scoreSchema.index({ score: -1 });
 scoreSchema.index({ date: -1 });
 scoreSchema.index({ playerEmail: 1 });
 
-const Score = mongoose.model('Score', scoreSchema);
+const Score = mongoose.models.Score || mongoose.model('Score', scoreSchema);
+
+// Middleware para conectar a DB antes de cada request
+app.use(async (req, res, next) => {
+  try {
+    await connectToDatabase();
+    next();
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error de conexión a la base de datos'
+    });
+  }
+});
 
 // Ruta de salud para verificar que el servidor funciona
 app.get('/', (req, res) => {
   res.json({ 
     message: 'Snake Game API funcionando correctamente',
     version: '1.0.0',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    database: isConnected ? 'Conectado' : 'Desconectado'
   });
 });
 

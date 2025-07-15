@@ -17,7 +17,6 @@ app.use(cors({
   credentials: true
 }));
 
-
 app.use(express.json(
   {limit: '50mb'}
 ));
@@ -72,8 +71,13 @@ scoreSchema.index({ playerEmail: 1 });
 
 const Score = mongoose.model('Score', scoreSchema);
 
-app.listen(PORT, () => {
-  console.log("Server is running on port 5000");
+// Ruta de salud para verificar que el servidor funciona
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Snake Game API funcionando correctamente',
+    version: '1.0.0',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Rutas
@@ -114,26 +118,6 @@ app.get('/api/scores', async (req, res) => {
   }
 });
 
-// // GET - Obtener puntuación más alta
-// app.get('/api/scores/highest', async (req, res) => {
-//   try {
-//     const highestScore = await Score.findOne()
-//       .sort({ score: -1 })
-//       .select('playerName score date -_id');
-
-//     res.json({
-//       success: true,
-//       data: highestScore
-//     });
-//   } catch (error) {
-//     console.error('Error obteniendo puntuación más alta:', error);
-//     res.status(500).json({
-//       success: false,
-//       message: 'Error interno del servidor'
-//     });
-//   }
-// });
-
 // POST - Guardar nueva puntuación
 app.post('/api/scores', async (req, res) => {
   try {
@@ -168,12 +152,9 @@ app.post('/api/scores', async (req, res) => {
       });
     }
 
-    // Verificar si ya existe una puntuación reciente del mismo email/IP
+    // Verificar si ya existe una puntuación reciente del mismo email
     const recentScore = await Score.findOne({
-      $or: [
-        { playerEmail: playerEmail.toLowerCase() },
-        { ipAddress: req.clientIP }
-      ],
+      playerEmail: playerEmail.toLowerCase(),
       date: { $gte: new Date(Date.now() - 5 * 60 * 1000) } // 5 minutos
     });
 
@@ -232,41 +213,12 @@ app.post('/api/scores', async (req, res) => {
   }
 });
 
-// // GET - Obtener estadísticas
-// app.get('/api/stats', async (req, res) => {
-//   try {
-//     const totalGames = await Score.countDocuments();
-//     const averageScore = await Score.aggregate([
-//       { $group: { _id: null, avgScore: { $avg: '$score' } } }
-//     ]);
-    
-//     const topPlayers = await Score.aggregate([
-//       { $group: { 
-//           _id: '$playerEmail', 
-//           playerName: { $first: '$playerName' },
-//           maxScore: { $max: '$score' },
-//           gamesPlayed: { $sum: 1 }
-//         }
-//       },
-//       { $sort: { maxScore: -1 } },
-//       { $limit: 5 },
-//       { $project: { _id: 0, playerName: 1, maxScore: 1, gamesPlayed: 1 } }
-//     ]);
+// Para Vercel, exporta la app
+export default app;
 
-//     res.json({
-//       success: true,
-//       data: {
-//         totalGames,
-//         averageScore: averageScore[0]?.avgScore || 0,
-//         topPlayers
-//       }
-//     });
-//   } catch (error) {
-//     console.error('Error obteniendo estadísticas:', error);
-//     res.status(500).json({
-//       success: false,
-//       message: 'Error interno del servidor'
-//     });
-//   }
-// });
-
+// Solo inicia el servidor si no está en Vercel
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
+}

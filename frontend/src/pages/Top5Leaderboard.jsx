@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, Medal, Award, Users, Calendar } from 'lucide-react';
+import { Trophy, Medal, Award, Users, Calendar, RotateCcw } from 'lucide-react';
 import ENVIROMENT from '../config/environment.config';
+import './Top5Leaderboard.css';
 
 const Top5Leaderboard = () => {
   const [topScores, setTopScores] = useState([]);
@@ -31,7 +32,7 @@ const Top5Leaderboard = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch(`${ENVIROMENT.URL_API}api/scores/stats`);
+      const response = await fetch(`${ENVIROMENT.URL_API}/api/scores/stats`);
       const data = await response.json();
       
       if (data.success) {
@@ -47,40 +48,38 @@ const Top5Leaderboard = () => {
   const getPositionIcon = (position) => {
     switch (position) {
       case 1:
-        return <Trophy className="w-6 h-6 text-yellow-500" />;
+        return <Trophy className="position-icon gold" />;
       case 2:
-        return <Medal className="w-6 h-6 text-gray-400" />;
+        return <Medal className="position-icon silver" />;
       case 3:
-        return <Award className="w-6 h-6 text-amber-600" />;
+        return <Award className="position-icon bronze" />;
       default:
-        return <div className="w-6 h-6 rounded-full bg-blue-500 text-white text-sm font-bold flex items-center justify-center">{position}</div>;
+        return <div className="position-icon other">{position}</div>;
     }
   };
 
   const getPositionClass = (position) => {
-    switch (position) {
-      case 1:
-        return 'bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-300';
-      case 2:
-        return 'bg-gradient-to-r from-gray-50 to-gray-100 border-gray-300';
-      case 3:
-        return 'bg-gradient-to-r from-amber-50 to-amber-100 border-amber-300';
-      default:
-        return 'bg-gradient-to-r from-blue-50 to-blue-100 border-blue-300';
-    }
+    return `score-item position-${position}`;
+  };
+
+  const handleRetry = () => {
+    setError(null);
+    setLoading(true);
+    fetchTop5Scores();
+    fetchStats();
   };
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded mb-4"></div>
-            <div className="space-y-3">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-16 bg-gray-100 rounded"></div>
-              ))}
-            </div>
+      <div className="leaderboard-container">
+        <div className="leaderboard-card">
+          <div className="loading-state">
+            <div className="loading-skeleton header"></div>
+            <div className="loading-skeleton item"></div>
+            <div className="loading-skeleton item"></div>
+            <div className="loading-skeleton item"></div>
+            <div className="loading-skeleton item"></div>
+            <div className="loading-skeleton item"></div>
           </div>
         </div>
       </div>
@@ -89,128 +88,126 @@ const Top5Leaderboard = () => {
 
   if (error) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-          <div className="text-red-600 mb-2">⚠️ Error</div>
-          <div className="text-red-800">{error}</div>
-          <button 
-            onClick={() => {
-              setError(null);
-              setLoading(true);
-              fetchTop5Scores();
-              fetchStats();
-            }}
-            className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-          >
-            Reintentar
-          </button>
+      <div className="leaderboard-container">
+        <div className="leaderboard-card">
+          <div className="error-state">
+            <div className="error-icon">⚠️</div>
+            <div className="error-title">Error</div>
+            <div className="error-message">{error}</div>
+            <button 
+              onClick={handleRetry}
+              className="btn btn-retry"
+            >
+              <RotateCcw size={16} />
+              Reintentar
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
+    <div className="leaderboard-container">
       {/* Header */}
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">
-          🏆 Top 5 Snake Game Leaderboard
-        </h1>
-        <p className="text-gray-600">Los mejores jugadores del Snake Game</p>
+      <div className="leaderboard-card">
+        <div className="leaderboard-header">
+          <h1 className="leaderboard-title">
+            🏆 Top 5 Snake Game Leaderboard
+          </h1>
+          <p className="leaderboard-subtitle">Los mejores jugadores del Snake Game</p>
+        </div>
       </div>
 
       {/* Estadísticas generales */}
       {stats && (
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-            <Users className="w-5 h-5 mr-2 text-blue-600" />
-            Estadísticas Generales
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">{stats.highestScore}</div>
-              <div className="text-sm text-green-800">Mejor Puntuación</div>
-            </div>
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{stats.totalGames}</div>
-              <div className="text-sm text-blue-800">Partidas Jugadas</div>
-            </div>
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">{stats.totalPlayers}</div>
-              <div className="text-sm text-purple-800">Jugadores Únicos</div>
-            </div>
-            <div className="text-center p-4 bg-orange-50 rounded-lg">
-              <div className="text-2xl font-bold text-orange-600">{stats.averageScore}</div>
-              <div className="text-sm text-orange-800">Promedio</div>
+        <div className="leaderboard-card">
+          <div className="stats-section">
+            <h2 className="stats-title">
+              <Users size={20} />
+              Estadísticas Generales
+            </h2>
+            <div className="stats-grid">
+              <div className="stat-card highest-score">
+                <div className="stat-value">{stats.highestScore}</div>
+                <div className="stat-label">Mejor Puntuación</div>
+              </div>
+              <div className="stat-card total-games">
+                <div className="stat-value">{stats.totalGames}</div>
+                <div className="stat-label">Partidas Jugadas</div>
+              </div>
+              <div className="stat-card total-players">
+                <div className="stat-value">{stats.totalPlayers}</div>
+                <div className="stat-label">Jugadores Únicos</div>
+              </div>
+              <div className="stat-card average-score">
+                <div className="stat-value">{stats.averageScore}</div>
+                <div className="stat-label">Promedio</div>
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {/* Top 5 Leaderboard */}
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
-          <Trophy className="w-5 h-5 mr-2 text-yellow-500" />
-          Top 5 Mejores Puntuaciones
-        </h2>
-        
-        {topScores.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <div className="text-6xl mb-4">🎮</div>
-            <div className="text-lg">No hay puntuaciones registradas aún</div>
-            <div className="text-sm mt-2">¡Sé el primero en jugar!</div>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {topScores.map((score) => (
-              <div
-                key={`${score.playerName}-${score.score}-${score.date}`}
-                className={`flex items-center p-4 rounded-lg border-2 transition-all duration-200 hover:shadow-md ${getPositionClass(score.position)}`}
-              >
-                {/* Posición */}
-                <div className="flex-shrink-0 mr-4">
-                  {getPositionIcon(score.position)}
-                </div>
-                
-                {/* Información del jugador */}
-                <div className="flex-grow">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-semibold text-gray-800 text-lg">
-                        {score.playerName}
-                      </div>
-                      <div className="text-sm text-gray-600 flex items-center">
-                        <Calendar className="w-4 h-4 mr-1" />
-                        {score.date}
-                      </div>
+      <div className="leaderboard-card">
+        <div className="top5-section">
+          <h2 className="top5-title">
+            <Trophy size={20} />
+            Top 5 Mejores Puntuaciones
+          </h2>
+          
+          {topScores.length === 0 ? (
+            <div className="empty-state">
+              <span className="empty-state-emoji">🎮</span>
+              <div className="empty-state-title">No hay puntuaciones registradas aún</div>
+              <div className="empty-state-subtitle">¡Sé el primero en jugar!</div>
+            </div>
+          ) : (
+            <div className="scores-list">
+              {topScores.map((score, index) => (
+                <div
+                  key={`${score.playerName}-${score.score}-${score.date}-${index}`}
+                  className={getPositionClass(score.position)}
+                >
+                  {/* Posición */}
+                  <div className="position-icon-container">
+                    {getPositionIcon(score.position)}
+                  </div>
+                  
+                  {/* Información del jugador */}
+                  <div className="player-info">
+                    <div className="player-name">
+                      {score.playerName}
                     </div>
-                    
-                    {/* Puntuación */}
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-gray-800">
-                        {score.score.toLocaleString()}
-                      </div>
-                      <div className="text-sm text-gray-600">puntos</div>
+                    <div className="player-date">
+                      <Calendar size={16} />
+                      {score.date}
                     </div>
                   </div>
+                  
+                  {/* Puntuación */}
+                  <div className="score-display">
+                    <div className="score-value">
+                      {score.score.toLocaleString()}
+                    </div>
+                    <div className="score-label">puntos</div>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Botón para actualizar */}
-      <div className="text-center">
+      <div className="leaderboard-actions">
         <button
-          onClick={() => {
-            setLoading(true);
-            fetchTop5Scores();
-            fetchStats();
-          }}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          onClick={handleRetry}
+          className="btn btn-primary"
         >
-          🔄 Actualizar Clasificación
+          <RotateCcw size={16} />
+          Actualizar Clasificación
         </button>
       </div>
     </div>

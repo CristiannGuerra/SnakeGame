@@ -245,6 +245,93 @@ app.post('/api/scores', async (req, res) => {
   }
 });
 
+// GET - Obtener TOP 5 mejores puntuaciones
+app.get('/api/scores/top5', async (req, res) => {
+  try {
+    const topScores = await Score.find()
+      .sort({ score: -1, date: -1 }) // Ordenar por puntuación descendente, luego por fecha
+      .limit(5)
+      .select('playerName score date -_id'); // Seleccionar solo los campos necesarios
+
+    // Formatear las fechas para mejor presentación
+    const formattedScores = topScores.map((score, index) => ({
+      position: index + 1,
+      playerName: score.playerName,
+      score: score.score,
+      date: score.date.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }));
+
+    res.json({
+      success: true,
+      message: 'Top 5 puntuaciones obtenidas exitosamente',
+      data: formattedScores,
+      totalRecords: formattedScores.length
+    });
+
+  } catch (error) {
+    console.error('Error obteniendo top 5 puntuaciones:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor al obtener el top 5'
+    });
+  }
+});
+
+// GET - Obtener estadísticas generales (opcional)
+app.get('/api/scores/stats', async (req, res) => {
+  try {
+    const stats = await Score.aggregate([
+      {
+        $group: {
+          _id: null,
+          highestScore: { $max: "$score" },
+          lowestScore: { $min: "$score" },
+          averageScore: { $avg: "$score" },
+          totalGames: { $sum: 1 },
+          totalPlayers: { $addToSet: "$playerEmail" }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          highestScore: 1,
+          lowestScore: 1,
+          averageScore: { $round: ["$averageScore", 2] },
+          totalGames: 1,
+          totalPlayers: { $size: "$totalPlayers" }
+        }
+      }
+    ]);
+
+    const result = stats[0] || {
+      highestScore: 0,
+      lowestScore: 0,
+      averageScore: 0,
+      totalGames: 0,
+      totalPlayers: 0
+    };
+
+    res.json({
+      success: true,
+      message: 'Estadísticas obtenidas exitosamente',
+      data: result
+    });
+
+  } catch (error) {
+    console.error('Error obteniendo estadísticas:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor al obtener estadísticas'
+    });
+  }
+});
+
 // Para Vercel, exporta la app
 export default app;
 

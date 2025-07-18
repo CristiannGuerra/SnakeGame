@@ -16,7 +16,7 @@ const Top5Leaderboard = () => {
 
   const fetchTop5Scores = async () => {
     try {
-      const response = await fetch(`${ENVIROMENT.URL_API}/api/scores/top5`);
+      const response = await fetch(`${ENVIROMENT.URL_API}api/scores/top5`);
       const data = await response.json();
       
       if (data.success) {
@@ -32,7 +32,7 @@ const Top5Leaderboard = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch(`${ENVIROMENT.URL_API}/api/scores/stats`);
+      const response = await fetch(`${ENVIROMENT.URL_API}api/scores/stats`);
       const data = await response.json();
       
       if (data.success) {

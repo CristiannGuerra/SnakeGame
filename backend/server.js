@@ -38,7 +38,6 @@ const connectToDatabase = async () => {
     const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/snake-game';
     
     await mongoose.connect(mongoUri, {
-      bufferCommands: false,
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,

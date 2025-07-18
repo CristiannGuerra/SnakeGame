@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Play, Pause, RotateCcw } from 'lucide-react';
 import './SnakeGame.css'; // Importar el archivo CSS
 import ENVIROMENT from '../config/environment.config';
+import { Link } from 'react-router-dom';
 
 const GRID_SIZE = 20;
 const INITIAL_SNAKE = [{ x: 10, y: 10 }];
@@ -459,6 +460,7 @@ const SnakeGame = () => {
             <p>🎮 Usa las flechas del teclado, los botones o desliza para mover</p>
             <p>📱 Optimizado para tablets y móviles</p>
             <p>🍎 Come la comida roja para crecer</p>
+            <Link to="/top5">Ver Top 5</Link>
           </div>
         </div>
       </div>
